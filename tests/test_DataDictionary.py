@@ -76,7 +76,7 @@ def test_DataDictionary_copy():
     dd = _setup_neurogap_practice_DataDictionary()
     dd2 = dd.copy()
     assert dd2 is not dd
-    assert all(dd == dd2)
+    assert dd.equals(dd2)
 
 
 def test_DataDictionary_checkboxes_property():
