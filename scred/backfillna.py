@@ -37,30 +37,29 @@ global key, operation, value, cond, joint
 global cond_chain, cond_chain_with_parentheses, logic
 
 # Define elements of parser grammar
-key = pp.Word(pp.alphanums + "_")(
-    "key"
-)  # Variable name: alphanumeric + underscores.
-operation = pp.oneOf("> >= == != <= <")("operation")  # Comparative operations.
-value = pp.Word(pp.nums + "-")(
-    "value"
-)  # Response value: Negative sign + digits.
-cond = pp.Group(key + operation + value)(
-    "condition"
-)  # Phrase group for a single logical expression.
-joint = pp.oneOf("and or")  # Phrases that join logical statements together.
-cond_chain_with_parentheses = (
-    pp.Forward()
-)  # Tells parser there may be paren chain coming, inserted by '<<=='
+# Variable name: alphanumeric + underscores.
+key = pp.Word(pp.alphanums + "_")("key")
+# Comparative operations.
+operation = pp.oneOf("> >= == != <= <")("operation")
+# Response value: Negative sign + digits.
+value = pp.Word(pp.nums + "-")("value")
+# Phrase group for a single logical expression.
+cond = pp.Group(key + operation + value)("condition")
+# Phrases that join logical statements together.
+joint = pp.oneOf("and or")
+# Tells parser there may be paren chain coming, inserted by '<<=='
+cond_chain_with_parentheses = pp.Forward()
 cond_chain = (
     pp.Optional("(")
     + cond
     + pp.Optional(")")
     + pp.Optional(joint + cond_chain_with_parentheses)
 )
-cond_chain_with_parentheses <<= (
-    cond_chain | "(" + cond_chain + ")"
-)  # Inserted at previous pp.Forward()
-logic = cond_chain_with_parentheses + pp.StringEnd()  # The full grammar
+# Inserted at previous pp.Forward()
+cond_chain_with_parentheses <<= cond_chain | "(" + cond_chain + ")"
+# The full grammar
+logic = cond_chain_with_parentheses + pp.StringEnd()
+
 
 # ---------------------------------------------------
 # Set up parse actions.
@@ -129,7 +128,8 @@ class Parser:
         global key, operation, value, cond, joint
         global cond_chain, cond_chain_with_parentheses, logic
         self.data = data
-        self.data["LOGIC_MET"] = ""  # Add empty column for logic result
+        # Add empty column for logic result
+        self.data["LOGIC_MET"] = ""
         # Complete parser setup by pointing action at this instance
         key.setParseAction(self.use_key)
 
