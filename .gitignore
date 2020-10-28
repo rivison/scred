@@ -103,6 +103,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+htmlmypy
 
 # Private credentials
 config.json
