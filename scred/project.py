@@ -7,12 +7,12 @@ the `webapi` module, which lives "above" `dtypes` in the hierarchy.
 """
 
 from copy import deepcopy
-from typing import List, Dict, Optional
+from typing import Any, Dict, Iterable, List, Mapping, Optional, cast
 
 import requests
 
 from . import webapi
-from . import dtypes
+from .dtypes import DataDictionary, Record  # , RecordSet
 
 # from .utils import chunker
 
@@ -25,18 +25,24 @@ class RedcapProject:
     create requester.
     """
 
-    def __init__(self, url, token, metadata=None, requester_kwargs=None):
+    def __init__(
+        self,
+        url: str,
+        token: str,
+        metadata: Optional[DataDictionary] = None,
+        requester_kwargs: Optional[Mapping[str, Any]] = None,
+    ) -> None:
         if requester_kwargs is None:
             requester_kwargs = dict()
         self.requester = webapi.RedcapRequester(
             token=token, url=url, **requester_kwargs
         )
-        self._metadata = None
-        self._version = None
-        self._efn = None
+        self._metadata: DataDictionary
+        self._version: str
+        self._efn: Dict[str, Any]
 
     @property
-    def url(self):
+    def url(self) -> str:
         """
         API entry point URL for REDCap server hosting the project.
         """
@@ -44,35 +50,33 @@ class RedcapProject:
 
     # Maybe cut down on boilerplate with @lazyload decorator?
     @property
-    def metadata(self):
+    def metadata(self) -> DataDictionary:
         """
         Property that holds the metadata (Data Dictionary) for this
         project instance.
         """
-        if self._metadata is None:
-            self._metadata = dtypes.DataDictionary(
-                self.requester.get_metadata()
-            )
+        if self._metadata is cast(DataDictionary, None):
+            self._metadata = DataDictionary(self.requester.get_metadata())
         return self._metadata
 
     @metadata.setter
-    def metadata(self, value):
-        if not isinstance(value, (dtypes.DataDictionary, None)):
+    def metadata(self, value: Optional[DataDictionary]) -> None:
+        if value is not None and not isinstance(value, DataDictionary):
             raise TypeError("metadata must be None or DataDictionary")
-        self._metadata = value
+        self._metadata = cast(DataDictionary, value)
 
     @property
-    def efn(self):
+    def efn(self) -> Dict[str, Any]:
         """
         exportFieldNames for the REDCap project.
         Maps (field in REDCap) -> (List[fields in export])
         """
-        if self._efn is None:
+        if self._efn is cast(Dict[str, Any], None):
             self.efn = self.requester.get_export_fieldnames()
         return self._efn
 
     @efn.setter  # TODO: Refactor
-    def efn(self, value: List[Dict]):
+    def efn(self, value: List[Mapping[str, Any]]) -> None:
         """
         Create the map of checkboxes to lists of their exportFieldNames.
         GETS: list of dicts; each has
@@ -86,30 +90,30 @@ class RedcapProject:
             if d["original_field_name"] != d["export_field_name"]
         ]
         names = [d["original_field_name"] for d in differing]
-        names = set(names)
-        for nm in names:
+        # names = set(names)
+        for nm in set(names):
             relevant = [d for d in differing if d["original_field_name"] == nm]
             export_names = [d["export_field_name"] for d in relevant]
             mapping[nm] = export_names
         self._efn = mapping
 
     @property
-    def version(self):
-        if self._version is None:
+    def version(self) -> str:
+        if self._version is cast(str, None):
             self._version = self.requester.get_version()
         return self._version
 
     @version.setter
-    def version(self, value):
+    def version(self, value: str) -> None:
         self._version = value
 
-    def post(self, **kwargs):
+    def post(self, **kwargs: Iterable[str]) -> requests.Response:
         """
         Generic POST wrapper to allow unsupported requests.
         """
         return self.requester.post(**kwargs)
 
-    def cbnames(self, cbvar: str):
+    def cbnames(self, cbvar: str) -> Any:
         """
         Takes a checkbox variable name and
         returns all exported field names.
@@ -121,7 +125,7 @@ class RedcapProject:
         """
         return self.efn[cbvar]
 
-    def any_endorsed(self, record, checkbox) -> bool:
+    def any_endorsed(self, record: Record, checkbox: str) -> bool:
         """
         Given a `record`, looks to see if any export field for
         `checkbox` was endorsed.
@@ -134,23 +138,48 @@ class RedcapProject:
                 return True
         return False
 
-    def get_records(self, records=None, chunksize: int = 20, **kwargs):
+    def get_records(
+        self,
+        records: Optional[Iterable[str]] = None,
+        fields: Optional[Iterable[str]] = None,
+        **kwargs: str,
+    ) -> Any:
         """
-        Export a set of records from `project`.
-        Optional arguments include:
+        Export a set of records from the given project.
+        Optional arguments also include:
             -forms (replace spaces with _)
             -dateRangeBegin
             -dateRangeEnd
-        For dateRange options, format as YYYY-MM-DD HH:MM:SS. Records
-        retrieved are created OR modified within that range, and time
-        boundaries are exclusive.
+        For dateRange options, format as YYYY-MM-DD HH:MM:SS.
+        Records retrieved are created OR modified within that range,
+        and time boundaries are exclusive.
         """
-        # downloader = RecordsDownloader(
-        #     self.requester, chunksize=chunksize, params=kwargs
-        # )
+        payload = {"content": "record"}
+        if records and not isinstance(records, str):
+            payload.update(records=",".join(records))
+        if fields and not isinstance(fields, str):
+            payload.update(fields=",".join(fields))
+        return self.post(**payload, **kwargs).json()
 
-        # Here: Room for func that does this/handles chunking/async
-        # return self.post(**payload, **kwargs).json()
+    # def get_records_chunked(
+    #     self, records=None, chunksize: int = 20, **kwargs
+    # ) -> None:
+    #     """
+    #     Export a set of records from the given project.
+    #     Optional arguments include:
+    #         -forms (replace spaces with _)
+    #         -dateRangeBegin
+    #         -dateRangeEnd
+    #     For dateRange options, format as YYYY-MM-DD HH:MM:SS. Records
+    #     retrieved are created OR modified within that range, and time
+    #     boundaries are exclusive.
+    #     """
+    #     downloader = RecordsDownloader(
+    #         self.requester, chunksize=chunksize, params=kwargs
+    #     )
+
+    #     # Here: Room for func that does this/handles chunking/async
+    #     return self.post(**payload, **kwargs).json()
 
 
 class RecordsDownloader:
@@ -159,9 +188,7 @@ class RecordsDownloader:
     through instances of RedcapProject.
     """
 
-    def __init__(
-        self, requester, chunksize: int = 20, params: Optional[dict] = None
-    ):
+    def __init__(self, requester, chunksize=20, params=None):
         self.requester = requester
         self.chunksize = chunksize
         if params is None:
@@ -221,7 +248,7 @@ class RecordsDownloader:
 
 def mock_sync():
     # for content in syncer.fetch_records(test_records):
-    #     instances = dtypes.RecordSet(content, primary_key="subj_id")
+    #     instances = RecordSet(content, primary_key="subj_id")
     # TODO: Do I want to be able to set up an empty RecordSet?
     # Or combine them easily?
     pass
