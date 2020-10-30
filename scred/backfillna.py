@@ -28,9 +28,20 @@ implemented in the Record class (see scred/dtypes.py).
 """
 
 import warnings
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    SupportsInt,
+)
 
 import pyparsing as pp
 
+if TYPE_CHECKING:
+    from .dtypes import Record
 # ---------------------------------------------------
 
 global key, operation, value, cond, joint
@@ -66,7 +77,7 @@ logic = cond_chain_with_parentheses + pp.StringEnd()
 
 
 # Value: convert to numeric
-def list_to_ints(list_of_nums):
+def list_to_ints(list_of_nums: Iterable[SupportsInt]) -> List[int]:
     """
     Receives a list of nums because <fill in after reviewing pyparsing>
     """
@@ -79,7 +90,7 @@ value.setParseAction(list_to_ints)
 
 
 # Condition: access values & check logic
-def check_condition(parsed):
+def check_condition(parsed: Sequence[Any]) -> bool:
     """
     Takes in parser result, looks up key(s),
     and returns bool result of statement.
@@ -96,7 +107,7 @@ def check_condition(parsed):
 cond.setParseAction(check_condition)
 
 
-def fullparse(expression):
+def fullparse(expression: str) -> bool:
     """
     Takes in an expression and parses it using the full branching logic.
     This attempts to split the string into tokens, put the tokens back
@@ -111,7 +122,7 @@ def fullparse(expression):
     except KeyError:
         # If condition exists but can't be parsed, assume not met
         print(
-            "WARNING! KeyError during Parser.fullparse(),"
+            "WARNING! KeyError during Parser.fullparse(), "
             "may falsely code as N/A."
         )
         return False
@@ -124,7 +135,7 @@ def fullparse(expression):
 
 
 class Parser:
-    def __init__(self, data):
+    def __init__(self, data: "Record") -> None:
         global key, operation, value, cond, joint
         global cond_chain, cond_chain_with_parentheses, logic
         self.data = data
@@ -133,7 +144,7 @@ class Parser:
         # Complete parser setup by pointing action at this instance
         key.setParseAction(self.use_key)
 
-    def use_key(self, list_with_key):
+    def use_key(self, list_with_key: Sequence[str]) -> Any:
         """
         Access a key's value in the instance data.
         """
@@ -146,7 +157,7 @@ class Parser:
             )
             return False
 
-    def val_from_key(self, key, data=None):
+    def val_from_key(self, key: str, data: "Optional[Record]" = None) -> Any:
         """
         Helper function that takes a key, looks that key up in the
         instance record, then returns its value. Not sure how this
@@ -162,7 +173,7 @@ class Parser:
         except IndexError:
             return None
 
-    def parse_all_logic(self):
+    def parse_all_logic(self) -> None:
         """
         Fill `LOGIC_MET` column for each field in the record, based on
         other responses in the record.
