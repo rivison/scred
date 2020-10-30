@@ -5,6 +5,8 @@ Creates the request-sending class used to interact with
 a REDCap instance.
 """
 
+from typing import Any, Callable, Dict, Iterable
+
 import requests
 
 from .utils import LogMixin
@@ -15,7 +17,9 @@ class RedcapRequester(LogMixin):
     Wrapper for `requests` API that handles web calls to/from REDCap.
     """
 
-    def __init__(self, url, token, default_format="json"):
+    def __init__(
+        self, url: str, token: str, default_format: str = "json"
+    ) -> None:
         self.logger.debug("[DEV] Testing LogMixIn")
         print(
             f"[DEV@{__file__}.{self.__class__}] "
@@ -25,14 +29,16 @@ class RedcapRequester(LogMixin):
         self.payloader = self._build_payloader(token, default_format)
 
     @staticmethod
-    def _build_payloader(token, default_format):
+    def _build_payloader(
+        token: str, default_format: str
+    ) -> Callable[..., Dict[str, Any]]:
         """
         Lock in the REDCap user token and format to avoid passing each
         time. kwargs are inserted at the end; you can overwrite on a
         given request.
         """
 
-        def payloader(**kwargs):
+        def payloader(**kwargs: Any) -> Dict[str, Any]:
             """Constructs the payload for a request."""
             payload = {"token": token, "format": default_format}
             payload.update(kwargs)
@@ -41,13 +47,13 @@ class RedcapRequester(LogMixin):
         return payloader
 
     @property
-    def url(self):
+    def url(self) -> str:
         """
         The API entry point for all requests.
         """
         return self._url
 
-    def post(self, **kwargs):
+    def post(self, **kwargs: Iterable[str]) -> requests.Response:
         """
         Wraps around `requests.post` to handle
         request URL and authorization.
@@ -64,20 +70,20 @@ class RedcapRequester(LogMixin):
         else:
             return response
 
-    def get_metadata(self):
+    def get_metadata(self) -> Any:
         """
         Returns JSON metadata for this project
         from the host REDCap server.
         """
         return self.post(content="metadata").json()
 
-    def get_version(self):
+    def get_version(self) -> str:
         """
         Returns the version of REDCap running on the project's server.
         """
         return self.post(content="version").text
 
-    def get_export_fieldnames(self):
+    def get_export_fieldnames(self) -> Any:
         """ (From REDCap documentation)
         This method returns a list of the export/import-specific
         version of field names for all fields (or for one field, if
@@ -105,7 +111,7 @@ class RedcapRequester(LogMixin):
         return self.post(content="exportFieldNames").json()
 
     @staticmethod
-    def sanitize_param(param, sep: str = ",") -> str:
+    def sanitize_param(param: Iterable[str], sep: str = ",") -> str:
         """
         REDCap's API accepts multiple values for 1 parameter, but not by
         repeating the key like most services. Instead, needs to be in
