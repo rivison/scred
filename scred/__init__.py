@@ -10,9 +10,10 @@ from .webapi import RedcapRequester
 
 import typing
 
-_FieldNameValueType = typing.Any
-_MetadataValueType = typing.Any
-_ParsedValueType = typing.Any
-_PayloadValueType = typing.Any
-_PostJsonType = typing.Any
-_RecordValueType = typing.Any
+# using typing.NewType to force type-checking to treat types as distinct
+_FieldNameValueType = typing.NewType("_FieldNameValueType", object)
+_MetadataValueType = typing.NewType("_MetadataValueType", object)
+_ParsedValueType = typing.NewType("_ParsedValueType", object)
+_PayloadValueType = typing.NewType("_PayloadValueType", object)
+_PostJsonType = typing.NewType("_PostJsonType", object)
+_RecordValueType = typing.NewType("_RecordValueType", object)
