@@ -7,11 +7,14 @@ Defines classes to represent various REDCap objects.
 import json
 import re
 import warnings
-from typing import Any, Iterable, List, Mapping, Optional
+from typing import TYPE_CHECKING, Iterable, List, Mapping, Optional
 
 import pandas as pd
 
 from . import backfillna
+
+if TYPE_CHECKING:
+    from . import _FieldNameValueType, _MetadataValueType, _RecordValueType
 
 # ---------------------------------------------------
 
@@ -46,7 +49,9 @@ class DataDictionary(pd.DataFrame):
     """
 
     def __init__(
-        self, data: Iterable[Mapping[str, Any]], blogic_fmt: str = "redcap"
+        self,
+        data: "Iterable[Mapping[str, _MetadataValueType]]",
+        blogic_fmt: str = "redcap",
     ) -> None:
         """
         Index on field names with other metadata as columns.
@@ -76,7 +81,7 @@ class DataDictionary(pd.DataFrame):
         self._blogic_fmt = value
 
     @property
-    def checkboxes(self) -> List[Any]:
+    def checkboxes(self) -> "List[_FieldNameValueType]":
         mask = self["field_type"] == "checkbox"
         return self.loc[mask, "field_name"].tolist()
 
@@ -158,7 +163,9 @@ class Record(pd.DataFrame):
     # Record.set_template(r"some_regex"); participant = Record(my_data)
 
     def __init__(
-        self, primary_key: str, data: Optional[Mapping[str, str]] = None
+        self,
+        primary_key: str,
+        data: "Optional[Mapping[str, _RecordValueType]]" = None,
     ) -> None:
         """
         REDCap API will return a list of dicts; each dict is one record.
@@ -189,7 +196,10 @@ class Record(pd.DataFrame):
         self._id = value
 
     def require_column(
-        self, col: str, default_value: Any = "", flexible: bool = True
+        self,
+        col: str,
+        default_value: "_RecordValueType" = "",
+        flexible: bool = True,
     ) -> None:
         # TODO? Could make this a decorator. If I do,
         # think I can put name of calling func in error
@@ -279,7 +289,7 @@ class Record(pd.DataFrame):
         self._fill_na_values(metadata)
         self._fill_bad_data()
 
-    def rcvalue(self, field: str) -> Any:
+    def rcvalue(self, field: str) -> "_RecordValueType":
         """
         Used to more easily access numeric data in the `response`
         column. Only needs a field name; automatically gets response
@@ -297,7 +307,7 @@ class Record(pd.DataFrame):
         except (ValueError, TypeError):
             return value
 
-    def alter_value(self, field: str, new_value: Any) -> Any:
+    def alter_value(self, field: str, new_value: "_RecordValueType") -> None:
         """
         Used to change a stored value using underlying DataFrame's
         `.loc` method. Abstracts away column names.
@@ -319,7 +329,11 @@ class RecordSet(dict):
     # ID_TEMPLATE should probably be in Record. RecordSet should get a
     # method to change Record's class property, maybe...? Not sure yet.
 
-    def __init__(self, records: Iterable[Mapping], primary_key: str) -> None:
+    def __init__(
+        self,
+        records: "Iterable[Mapping[str, _RecordValueType]]",
+        primary_key: str,
+    ) -> None:
         """
         Take a bulk record data response from the REDCap API and, for
         each record, instantiate a Record. Use the `primary_key`
@@ -335,7 +349,7 @@ class RecordSet(dict):
                 instance = Record(primary_key=primary_key, data=record)
             self[instance.id] = instance
 
-    def __setitem__(self, key: str, value: Any) -> None:
+    def __setitem__(self, key: str, value: Record) -> None:
         if not Record.ID_TEMPLATE.match(key):
             raise ValueError(f"ID did not match template: {key}")
         super().__setitem__(key, value)

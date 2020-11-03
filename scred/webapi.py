@@ -5,11 +5,16 @@ Creates the request-sending class used to interact with
 a REDCap instance.
 """
 
-from typing import Any, Callable, Dict, Iterable
+from typing import TYPE_CHECKING, Callable, Dict, Iterable
 
 import requests
 
 from .utils import LogMixin
+
+if TYPE_CHECKING:
+    from . import _PayloadValueType, _PostJsonType
+
+# ---------------------------------------------------
 
 
 class RedcapRequester(LogMixin):
@@ -31,14 +36,16 @@ class RedcapRequester(LogMixin):
     @staticmethod
     def _build_payloader(
         token: str, default_format: str
-    ) -> Callable[..., Dict[str, Any]]:
+    ) -> "Callable[..., Dict[str, _PayloadValueType]]":
         """
         Lock in the REDCap user token and format to avoid passing each
         time. kwargs are inserted at the end; you can overwrite on a
         given request.
         """
 
-        def payloader(**kwargs: Any) -> Dict[str, Any]:
+        def payloader(
+            **kwargs: "_PayloadValueType"
+        ) -> "Dict[str, _PayloadValueType]":
             """Constructs the payload for a request."""
             payload = {"token": token, "format": default_format}
             payload.update(kwargs)
@@ -70,7 +77,7 @@ class RedcapRequester(LogMixin):
         else:
             return response
 
-    def get_metadata(self) -> Any:
+    def get_metadata(self) -> "_PostJsonType":
         """
         Returns JSON metadata for this project
         from the host REDCap server.
@@ -83,7 +90,7 @@ class RedcapRequester(LogMixin):
         """
         return self.post(content="version").text
 
-    def get_export_fieldnames(self) -> Any:
+    def get_export_fieldnames(self) -> "_PostJsonType":
         """ (From REDCap documentation)
         This method returns a list of the export/import-specific
         version of field names for all fields (or for one field, if

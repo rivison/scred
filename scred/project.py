@@ -7,7 +7,7 @@ the `webapi` module, which lives "above" `dtypes` in the hierarchy.
 """
 
 from copy import deepcopy
-from typing import Any, Dict, Iterable, List, Mapping, Optional, cast
+from typing import TYPE_CHECKING, Dict, Iterable, List, Mapping, Optional, cast
 
 import requests
 
@@ -15,6 +15,9 @@ from . import webapi
 from .dtypes import DataDictionary, Record  # , RecordSet
 
 # from .utils import chunker
+
+if TYPE_CHECKING:
+    from . import _FieldNameValueType, _PayloadValueType, _PostJsonType
 
 # ---------------------------------------------------
 
@@ -30,7 +33,7 @@ class RedcapProject:
         url: str,
         token: str,
         metadata: Optional[DataDictionary] = None,
-        requester_kwargs: Optional[Mapping[str, Any]] = None,
+        requester_kwargs: "Optional[Mapping[str, _PayloadValueType]]" = None,
     ) -> None:
         if requester_kwargs is None:
             requester_kwargs = dict()
@@ -39,7 +42,7 @@ class RedcapProject:
         )
         self._metadata: DataDictionary
         self._version: str
-        self._efn: Dict[str, Any]
+        self._efn: "Dict[str, _FieldNameValueType]"
 
     @property
     def url(self) -> str:
@@ -66,17 +69,17 @@ class RedcapProject:
         self._metadata = cast(DataDictionary, value)
 
     @property
-    def efn(self) -> Dict[str, Any]:
+    def efn(self) -> "Dict[str, _FieldNameValueType]":
         """
         exportFieldNames for the REDCap project.
         Maps (field in REDCap) -> (List[fields in export])
         """
-        if self._efn is cast(Dict[str, Any], None):
+        if self._efn is cast("Dict[str, _FieldNameValueType]", None):
             self.efn = self.requester.get_export_fieldnames()
         return self._efn
 
     @efn.setter  # TODO: Refactor
-    def efn(self, value: List[Mapping[str, Any]]) -> None:
+    def efn(self, value: "List[Mapping[str, _FieldNameValueType]]") -> None:
         """
         Create the map of checkboxes to lists of their exportFieldNames.
         GETS: list of dicts; each has
@@ -113,7 +116,7 @@ class RedcapProject:
         """
         return self.requester.post(**kwargs)
 
-    def cbnames(self, cbvar: str) -> Any:
+    def cbnames(self, cbvar: str) -> "_FieldNameValueType":
         """
         Takes a checkbox variable name and
         returns all exported field names.
@@ -143,7 +146,7 @@ class RedcapProject:
         records: Optional[Iterable[str]] = None,
         fields: Optional[Iterable[str]] = None,
         **kwargs: str,
-    ) -> Any:
+    ) -> "_PostJsonType":
         """
         Export a set of records from the given project.
         Optional arguments also include:
@@ -163,7 +166,7 @@ class RedcapProject:
 
     # def get_records_chunked(
     #     self, records=None, chunksize: int = 20, **kwargs
-    # ) -> None:
+    # ) -> "_PostJsonType":
     #     """
     #     Export a set of records from the given project.
     #     Optional arguments include:

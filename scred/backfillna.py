@@ -30,7 +30,6 @@ implemented in the Record class (see scred/dtypes.py).
 import warnings
 from typing import (
     TYPE_CHECKING,
-    Any,
     Iterable,
     List,
     Optional,
@@ -41,7 +40,8 @@ from typing import (
 import pyparsing as pp
 
 if TYPE_CHECKING:
-    from .dtypes import Record
+    from . import Record, _ParsedValueType, _RecordValueType
+
 # ---------------------------------------------------
 
 global key, operation, value, cond, joint
@@ -90,7 +90,7 @@ value.setParseAction(list_to_ints)
 
 
 # Condition: access values & check logic
-def check_condition(parsed: Sequence[Any]) -> bool:
+def check_condition(parsed: "Sequence[_ParsedValueType]") -> bool:
     """
     Takes in parser result, looks up key(s),
     and returns bool result of statement.
@@ -144,7 +144,7 @@ class Parser:
         # Complete parser setup by pointing action at this instance
         key.setParseAction(self.use_key)
 
-    def use_key(self, list_with_key: Sequence[str]) -> Any:
+    def use_key(self, list_with_key: Sequence[str]) -> "_RecordValueType":
         """
         Access a key's value in the instance data.
         """
@@ -157,7 +157,9 @@ class Parser:
             )
             return False
 
-    def val_from_key(self, key: str, data: "Optional[Record]" = None) -> Any:
+    def val_from_key(
+        self, key: str, data: "Optional[Record]" = None
+    ) -> "_RecordValueType":
         """
         Helper function that takes a key, looks that key up in the
         instance record, then returns its value. Not sure how this
